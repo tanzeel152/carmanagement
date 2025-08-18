@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useMemo } from "react";
-import { db } from "../../utilis/firebaseConfig";
+import { db } from "../../utilis/firebaseClient";
 import { doc, setDoc, collection, getDocs } from "firebase/firestore";
 import Navbar from "../../components/Nav/Nav";
 import Footer from "../../components/Footer/Footer";

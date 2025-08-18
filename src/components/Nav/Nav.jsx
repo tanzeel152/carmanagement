@@ -5,11 +5,11 @@ import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
 import { useAuth } from "../../Context/AuthContext";
 import { signOut } from "firebase/auth";
-import { auth } from "../../utilis/firebaseConfig";
+import { auth } from "../../utilis/firebaseClient";
 
 // Import Lucide icons
-import { 
-  Menu, X, Home, Shield, Briefcase, 
+import {
+  Menu, X, Home, Shield, Briefcase,
   DollarSign, LogOut, ArrowRight, User, Car
 } from "lucide-react";
 
@@ -40,7 +40,7 @@ const Navbar = () => {
   // Conditionally Render Links Based on Role
   const renderNavLinks = () => {
     const links = [];
-    
+
     switch (role) {
       case "admin":
         links.push(
@@ -69,15 +69,14 @@ const Navbar = () => {
 
     return links.map((link) => (
       <Link
-  key={link.path}
-  href={link.path}
-  className={`flex items-center py-2 px-4 rounded-md transition-colors duration-200 ${
-    pathname === link.path ? "bg-blue-700 text-white" : "hover:bg-blue-600"
-  }`}
->
-  {getIcon(link.path)}
-  <span className="whitespace-nowrap">{link.label}</span> {/* Ensures text stays inline */}
-</Link>
+        key={link.path}
+        href={link.path}
+        className={`flex items-center py-2 px-4 rounded-md transition-colors duration-200 ${pathname === link.path ? "bg-blue-700 text-white" : "hover:bg-blue-600"
+          }`}
+      >
+        {getIcon(link.path)}
+        <span className="whitespace-nowrap">{link.label}</span> {/* Ensures text stays inline */}
+      </Link>
 
     ));
   };

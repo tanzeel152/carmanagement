@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useMemo } from "react";
-import { db } from "../../utilis/firebaseConfig";
+import { db } from "../../utilis/firebaseClient";
 import { doc, setDoc, collection, getDocs } from "firebase/firestore";
 import { Calendar, Search, Truck, FileCheck, List, Shield, File, FileText } from "lucide-react";
 
@@ -118,16 +118,16 @@ const ExitGuard = () => {
     try {
       const year = new Date().getFullYear().toString();
       const month = new Date().toLocaleString("default", { month: "short" });
-  
+
       // Fetch cars from EntryGuard
       const entrySnapshot = await getDocs(collection(db, `EntryGuard/${year}/${month}`));
       const entryCars = entrySnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
-  
+
       // Fetch cars from ExitGuard
       const exitSnapshot = await getDocs(collection(db, `ExitGuard/${year}/${month}`));
       const exitCarNumbers = new Set();
       const exitUnregisteredSerials = new Set();
-  
+
       exitSnapshot.docs.forEach((doc) => {
         const data = doc.data();
         if (data?.registrationNo?.trim()) {
@@ -137,30 +137,30 @@ const ExitGuard = () => {
           exitUnregisteredSerials.add(data.unregisteredSerialNo);
         }
       });
-  
+
       // Filter out cars that are already in ExitGuard
       const availableJobCards = entryCars.filter((car) => {
         const isRegisteredCar =
           car.registrationNo?.trim() &&
           !exitCarNumbers.has(car.registrationNo.trim());
-  
+
         const isUnregisteredCar =
           car.isUnregistered &&
           car.unregisteredSerialNo?.trim() &&
           !exitUnregisteredSerials.has(car.unregisteredSerialNo.trim());
-  
+
         console.log("isRegisteredCar:", isRegisteredCar);
         console.log("isUnregisteredCar:", isUnregisteredCar);
-  
+
         return isRegisteredCar || isUnregisteredCar;
       });
-  
+
       setJobCardOptions(availableJobCards);
     } catch (error) {
       console.error("Error fetching job cards:", error);
     }
   };
-  
+
 
 
 

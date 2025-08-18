@@ -1,7 +1,7 @@
 "use client"
 import { useContext, useEffect, useState, createContext } from "react";
 import { onAuthStateChanged } from "firebase/auth";
-import { auth, db } from "../utilis/firebaseConfig";
+import { auth, db } from "../utilis/firebaseClient";
 import { doc, getDoc } from "firebase/firestore";
 
 const AuthContext = createContext();

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useMemo } from "react";
-import { db } from "../../utilis/firebaseConfig";
+import { db } from "../../utilis/firebaseClient";
 import { collection, getDocs, doc, setDoc } from "firebase/firestore";
 import { User, Calendar, Search, CheckCircle, XCircle, FilePlus, Truck, FileCheck, List, } from "lucide-react";
 
@@ -41,7 +41,7 @@ const ExitGuard = () => {
     tempGatePassNo: "",
     manualGatePassNo: "",
   });
-  
+
   useEffect(() => {
     setFormData((prev) => ({
       ...prev,
@@ -49,8 +49,8 @@ const ExitGuard = () => {
       time: new Date().toLocaleTimeString(),
     }));
   }, []);
-  
-  
+
+
   const [exitRecords, setExitRecords] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -64,14 +64,14 @@ const ExitGuard = () => {
       time: new Date().toLocaleTimeString(),
     }));
   }, []);
-  
+
 
   useEffect(() => {
     if (typeof window !== "undefined") {
       fetchExitRecords();
     }
   }, []);
-  
+
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -320,7 +320,7 @@ const ExitGuard = () => {
                     "Submit Exit Record"
                   )}
                 </button>
-                
+
               </div>
             </form>
           </div>

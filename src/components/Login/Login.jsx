@@ -3,10 +3,10 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { auth } from "../../utilis/firebaseConfig";
+import { auth } from "../../utilis/firebaseClient";
 import { signInWithEmailAndPassword } from "firebase/auth";
 import { doc, getDoc } from "firebase/firestore";
-import { db } from "../../utilis/firebaseConfig";
+import { db } from "../../utilis/firebaseClient";
 import { Mail, Lock, LogIn, AlertCircle } from "lucide-react";
 
 const Login = () => {

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { db } from "../../utilis/firebaseConfig";
+import { db } from "../../utilis/firebaseClient";
 import { collection, doc, setDoc, getDocs } from "firebase/firestore";
 import Footer from "../../components/Footer/Footer";
 import { FileCheck, List } from "lucide-react";

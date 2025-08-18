@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useMemo } from "react";
-import { db } from "../../utilis/firebaseConfig";
+import { db } from "../../utilis/firebaseClient";
 import { collection, addDoc, getDocs } from "firebase/firestore";
 import { Receipt, Clock, Wallet, Award, Gift, FileText, X, Check, AlertTriangle, List, Search } from "lucide-react";
 
