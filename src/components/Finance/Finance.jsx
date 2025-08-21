@@ -11,6 +11,8 @@ const FinanceForm = () => {
     receiptNumber: "",
     closingTime: new Date().toISOString().slice(11, 16), // Get current time in HH:MM format
     paymentMethod: "Cash",
+    invoiceAmount: "",
+    amountReceived: "",
     loyaltyRedemption: "",
     otherRedemption: "",
     redemptionDetails: "",
@@ -53,17 +55,79 @@ const FinanceForm = () => {
   console.log("financeRecords", financeRecords)
 
   const filteredRecords = useMemo(() => {
-    return financeRecords.filter(
-      (record) =>
-        record.invoiceNumber?.toLowerCase().includes(searchQuery) ||
-        record.receiptNumber?.toLowerCase().includes(searchQuery) ||
-        record.paymentMethod?.toLowerCase().includes(searchQuery) ||
-        record.loyaltyRedemption?.toLowerCase().includes(searchQuery) ||
-        record.otherRedemption?.toLowerCase().includes(searchQuery) ||
-        record.noWorkDone?.toLowerCase().includes(searchQuery) ||
-        record.redemptionDetails?.toLowerCase().includes(searchQuery)
-    );
+    const q = (searchQuery || "").toString().toLowerCase().trim();
+    if (!q) return financeRecords;
+
+    return financeRecords.filter((record) => {
+      const toNum = (value) => {
+        if (typeof value === "number") return Number.isFinite(value) ? value : 0;
+        if (typeof value === "string") {
+          const parsed = parseFloat(value.replace(/,/g, "").trim());
+          return Number.isFinite(parsed) ? parsed : 0;
+        }
+        return 0;
+      };
+
+      const invoice = toNum(record?.invoiceAmount);
+      const received = toNum(record?.amountReceived);
+      const loyalty = toNum(record?.loyaltyRedemptionAmount ?? record?.loyaltyRedemption);
+      const other = toNum(record?.otherRedemptionAmount ?? record?.otherRedemption);
+      const derivedRemaining = invoice - (received + loyalty + other);
+
+      const fields = [
+        record.invoiceNumber,
+        record.receiptNumber,
+        record.paymentMethod,
+        record.loyaltyRedemption,
+        record.otherRedemption,
+        record.redemptionDetails,
+        record.closingTime,
+        record.noWorkDone ? "yes" : "no",
+        record.invoiceAmount,
+        record.amountReceived,
+        record.remainingAmount,
+        derivedRemaining,
+      ];
+
+      return fields
+        .map((v) => (v ?? "").toString().toLowerCase())
+        .some((v) => v.includes(q));
+    });
   }, [searchQuery, financeRecords]);
+
+  const toNumber = (value) => {
+    const num = parseFloat(value);
+    return Number.isFinite(num) ? num : 0;
+  };
+
+  const toNumberFlexible = (value) => {
+    if (typeof value === "number") return Number.isFinite(value) ? value : 0;
+    if (typeof value === "string") {
+      const parsed = parseFloat(value.replace(/,/g, "").trim());
+      return Number.isFinite(parsed) ? parsed : 0;
+    }
+    return 0;
+  };
+
+  const deriveInvoiceFromRecord = (record) => {
+    const invoice = toNumberFlexible(record?.invoiceAmount);
+    const received = toNumberFlexible(record?.amountReceived);
+    const loyalty = toNumberFlexible(record?.loyaltyRedemptionAmount ?? record?.loyaltyRedemption);
+    const other = toNumberFlexible(record?.otherRedemptionAmount ?? record?.otherRedemption);
+    const remaining = Number.isFinite(record?.remainingAmount)
+      ? Number(record.remainingAmount)
+      : (invoice - (received + loyalty + other));
+    const derived = received + loyalty + other + (Number.isFinite(remaining) ? remaining : 0);
+    return invoice || (derived || null);
+  };
+
+  const calculatedRemainingAmount = useMemo(() => {
+    const invoiceAmountNum = toNumber(formData.invoiceAmount);
+    const amountReceivedNum = toNumber(formData.amountReceived);
+    const loyaltyNum = toNumber(formData.loyaltyRedemption);
+    const otherNum = toNumber(formData.otherRedemption);
+    return invoiceAmountNum - (amountReceivedNum + loyaltyNum + otherNum);
+  }, [formData.invoiceAmount, formData.amountReceived, formData.loyaltyRedemption, formData.otherRedemption]);
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -124,7 +188,18 @@ const FinanceForm = () => {
       const year = now.getFullYear().toString();
       const month = (now.getMonth() + 1).toString().padStart(2, "0"); // Ensure two-digit month
 
-      await addDoc(collection(db, "finance", year, month), formData);
+      const payload = {
+        ...formData,
+        invoiceAmount: toNumber(formData.invoiceAmount),
+        amountReceived: toNumber(formData.amountReceived),
+        // Keep redemptions as originally entered (may be text); also provide numeric versions for reporting
+        loyaltyRedemptionAmount: toNumber(formData.loyaltyRedemption),
+        otherRedemptionAmount: toNumber(formData.otherRedemption),
+        remainingAmount: calculatedRemainingAmount,
+        createdAt: now.toISOString(),
+      };
+
+      await addDoc(collection(db, "finance", year, month), payload);
       alert("Finance form submitted successfully!");
 
       // Reset the form fields after successful submission
@@ -133,6 +208,8 @@ const FinanceForm = () => {
         receiptNumber: "",
         closingTime: new Date().toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" }),
         paymentMethod: "Cash",
+        invoiceAmount: "",
+        amountReceived: "",
         loyaltyRedemption: "",
         otherRedemption: "",
         redemptionDetails: "",
@@ -257,6 +334,45 @@ const FinanceForm = () => {
                   </div>
                 </div>
 
+                {/* Amounts */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="flex flex-col">
+                    <label htmlFor="invoiceAmount" className="text-sm font-medium text-gray-700 mb-1">Invoice Amount</label>
+                    <div className="relative">
+                      <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">
+                        <Wallet size={18} />
+                      </span>
+                      <input
+                        type="number"
+                        id="invoiceAmount"
+                        name="invoiceAmount"
+                        placeholder="Enter invoice amount"
+                        value={formData.invoiceAmount}
+                        onChange={handleChange}
+                        className={`pl-10 p-3 border border-gray-300 rounded-lg w-full focus:ring-2 focus:ring-blue-200 focus:border-blue-400 outline-none transition-all`}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col">
+                    <label htmlFor="amountReceived" className="text-sm font-medium text-gray-700 mb-1">Amount Received</label>
+                    <div className="relative">
+                      <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">
+                        <Wallet size={18} />
+                      </span>
+                      <input
+                        type="number"
+                        id="amountReceived"
+                        name="amountReceived"
+                        placeholder="Enter amount received"
+                        value={formData.amountReceived}
+                        onChange={handleChange}
+                        className={`pl-10 p-3 border border-gray-300 rounded-lg w-full focus:ring-2 focus:ring-blue-200 focus:border-blue-400 outline-none transition-all`}
+                      />
+                    </div>
+                  </div>
+                </div>
+
                 {/* Time and Payment Method */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="flex flex-col">
@@ -362,21 +478,15 @@ const FinanceForm = () => {
                   </div>
 
                   {/* Remaining Amount Section */}
-                  {formData.amountReceived !== (formData.invoiceAmount + formData.loyaltyRedemption + formData.otherRedemption) && (
-                    <div className="flex flex-col">
-                      <label className="text-sm font-medium text-gray-700 mb-1">Remaining Amount</label>
-                      <input
-                        type="text"
-                        value={((formData.invoiceAmount ?? 0) +
-                          (formData.loyaltyRedemption ?? 0) +
-                          (formData.otherRedemption ?? 0)) -
-                          (formData.amountReceived ?? 0)}
-
-                        readOnly
-                        className="p-3 border border-gray-300 text-red-500 font-bold rounded-lg w-full bg-white focus:ring-2 focus:ring-blue-200 focus:border-blue-400 outline-none transition-all"
-                      />
-                    </div>
-                  )}
+                  <div className="flex flex-col">
+                    <label className="text-sm font-medium text-gray-700 mb-1">Remaining Amount</label>
+                    <input
+                      type="text"
+                      value={calculatedRemainingAmount}
+                      readOnly
+                      className="p-3 border border-gray-300 text-red-500 font-bold rounded-lg w-full bg-white focus:ring-2 focus:ring-blue-200 focus:border-blue-400 outline-none transition-all"
+                    />
+                  </div>
                 </div>
 
 
@@ -480,16 +590,18 @@ const FinanceForm = () => {
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Receipt #</th>
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Closing Time</th>
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Payment Method</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Invoice Amount</th>
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Loyalty Redemption</th>
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Other Redemption</th>
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Redemption Details</th>
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">No Work Done</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Remaining Amount</th>
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
                     {filteredRecords.length === 0 ? (
                       <tr>
-                        <td colSpan="8" className="px-4 py-10 text-center text-sm text-gray-500">
+                        <td colSpan="10" className="px-4 py-10 text-center text-sm text-gray-500">
                           <div className="flex flex-col items-center justify-center">
                             <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10 text-gray-400 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
@@ -506,10 +618,29 @@ const FinanceForm = () => {
                           <td className="px-4 py-3 text-sm text-gray-900 whitespace-nowrap">{record.receiptNumber || "N/A"}</td>
                           <td className="px-4 py-3 text-sm text-gray-900 whitespace-nowrap">{record.closingTime || "N/A"}</td>
                           <td className="px-4 py-3 text-sm text-gray-900 whitespace-nowrap">{record.paymentMethod || "N/A"}</td>
+                          <td className="px-4 py-3 text-sm text-gray-900 whitespace-nowrap">{(() => {
+                            const v = record.invoiceAmount;
+                            const fallback = deriveInvoiceFromRecord(record);
+                            const value = (v === null || v === undefined || v === "") ? fallback : v;
+                            return (value === null || value === undefined || value === "") ? "N/A" : value;
+                          })()}</td>
                           <td className="px-4 py-3 text-sm text-gray-900 whitespace-nowrap">{record.loyaltyRedemption || "N/A"}</td>
                           <td className="px-4 py-3 text-sm text-gray-900 whitespace-nowrap">{record.otherRedemption || "N/A"}</td>
                           <td className="px-4 py-3 text-sm text-gray-900 whitespace-nowrap">{record.redemptionDetails || "N/A"}</td>
                           <td className="px-4 py-3 text-sm text-gray-900 whitespace-nowrap">{record.noWorkDone ? "Yes" : "No"}</td>
+                          <td className="px-4 py-3 text-sm text-gray-900 whitespace-nowrap">{(() => {
+                            const toNum = (value) => {
+                              if (typeof value === 'number') return Number.isFinite(value) ? value : 0;
+                              if (typeof value === 'string') {
+                                const parsed = parseFloat(value.replace(/,/g, '').trim());
+                                return Number.isFinite(parsed) ? parsed : 0;
+                              }
+                              return 0;
+                            };
+                            const fallback = toNum(record?.invoiceAmount) - (toNum(record?.amountReceived) + toNum(record?.loyaltyRedemptionAmount ?? record?.loyaltyRedemption) + toNum(record?.otherRedemptionAmount ?? record?.otherRedemption));
+                            const value = typeof record.remainingAmount === 'number' ? record.remainingAmount : fallback;
+                            return Number.isFinite(value) ? value : 'N/A';
+                          })()}</td>
                         </tr>
                       ))
                     )}

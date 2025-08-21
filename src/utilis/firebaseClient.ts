@@ -10,3 +10,7 @@ const auth = getAuth(app);
 
 export { app, db, auth };
 
+
+
+
+
