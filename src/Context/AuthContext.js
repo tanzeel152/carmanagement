@@ -12,13 +12,23 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // Skip Firebase initialization if auth is not available (during build/SSR)
+    if (!auth || !db) {
+      setLoading(false);
+      return;
+    }
+
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       if (currentUser) {
         setUser(currentUser);
         // ✅ Fetch Role from Firestore
-        const userDoc = await getDoc(doc(db, "Users", currentUser.uid));
-        if (userDoc.exists()) {
-          setRole(userDoc.data().role); // Store role
+        try {
+          const userDoc = await getDoc(doc(db, "Users", currentUser.uid));
+          if (userDoc.exists()) {
+            setRole(userDoc.data().role); // Store role
+          }
+        } catch (error) {
+          console.error("Error fetching user role:", error);
         }
       } else {
         setUser(null);
