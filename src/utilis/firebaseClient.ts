@@ -3,22 +3,24 @@ import { getFirestore } from "firebase/firestore";
 import { getAuth } from "firebase/auth";
 import { clientConfig } from "./firebaseConfig";
 
-// Check if Firebase config is valid
-const isConfigValid = clientConfig.apiKey && clientConfig.projectId;
+// Use default/dummy config for build time when env vars are missing
+const buildTimeConfig = {
+  apiKey: "dummy-key-for-build",
+  authDomain: "dummy-domain.firebaseapp.com",
+  projectId: "dummy-project-id",
+  storageBucket: "dummy-bucket.appspot.com",
+  messagingSenderId: "123456789",
+  appId: "1:123456789:web:dummy-app-id",
+  measurementId: "G-DUMMY123"
+};
 
-// Initialize Firebase app only if config is valid
-let app, db, auth;
+// Use real config if available, otherwise use build-time config
+const effectiveConfig = clientConfig.apiKey && clientConfig.projectId ? clientConfig : buildTimeConfig;
 
-if (isConfigValid) {
-  app = getApps().length ? getApp() : initializeApp(clientConfig);
-  db = getFirestore(app);
-  auth = getAuth(app);
-} else {
-  // Create mock instances for build/SSR environments without proper config
-  app = null;
-  db = null;
-  auth = null;
-}
+// Initialize Firebase app once (for client usage)
+const app = getApps().length ? getApp() : initializeApp(effectiveConfig);
+const db = getFirestore(app);
+const auth = getAuth(app);
 
 export { app, db, auth };
 
